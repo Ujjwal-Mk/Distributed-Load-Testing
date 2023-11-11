@@ -1,37 +1,62 @@
 from kafka import KafkaProducer, KafkaConsumer
-import json
+from json import dumps, loads
 import time
 import uuid
 
-producer = KafkaProducer(bootstrap_servers='your_kafka_server')
-consumer = KafkaConsumer('register_topic', 'test_config_topic', 'trigger_topic', 'heartbeat_topic', 'metrics_topic', group_id='driver_group', bootstrap_servers='your_kafka_server')
+# producer = KafkaProducer(bootstrap_servers = ['localhost:9092'], value_serializer = lambda x: dumps(x).encode("utf-8"))
 
-metrics_store = {}
+#     send = {'EOF' : 1}
+#        producer.send('topic name', value=send)
 
-def send_request():
-    print("Sending request to the target web server.")
-    # Implement logic to send requests to the target web server
-    # Record statistics and publish metrics to Kafka
+# consumer = KafkaConsumer('topic name', 
+#                          bootstrap_servers=['localhost:9092'],
+#                         #  auto_offset_reset='earliest',
+#                         #  enable_auto_commit=True,
+#                          value_deserializer=lambda x: loads(x.decode('utf-8')))
 
-def handle_heartbeat():
-    print("Received heartbeat.")
-    # Implement logic to handle heartbeat
+# object = object.value   -> object will become json object
 
-def handle_metrics():
-    print("Received metrics.")
-    # Implement logic to handle metrics
+def send_request(driver):
+    pass
 
-# Implement other functionalities, Kafka message handling, etc.
 
-if __name__ == '__main__':
-    # Subscribe to Kafka topics
-    for message in consumer:
-        data = json.loads(message.value)
-        if message.topic == 'register_topic':
-            print(f"Node registered: {data['node_id']} with IP: {data['node_IP']}")
-        elif message.topic == 'test_config_topic':
-            send_request()
-        elif message.topic == 'heartbeat_topic':
-            handle_heartbeat()
-        elif message.topic == 'metrics_topic':
-            handle_metrics()
+def calculate_metrics(driver):
+    # use/modify driver.metrics
+    pass
+
+class Driver():
+    def __init__(self, node_id, node_IP, message_type):
+        self.intro = {
+            'node_id':node_id,
+            'node_IP':node_IP,
+            'message_type':message_type
+        }
+        self.metrics={
+            "mean_latency": "",
+            "median_latency": "",
+            "min_latency": "",
+            "max_latency": "",
+        }
+    
+    def send_metrics(self, test_id): #get the test id from which this driver was triggered
+        report_id = None        # generated through some function
+        sending_metrics={
+            'node_id':self.node_id,
+            'test_id':test_id,
+            'report_id':report_id,
+            'metrics':self.metrics
+        }
+        producer.send('metrics', sending_metrics)
+    
+    def heart(self):
+        sending_heart={
+            'node_id':self.node_id,
+            'heartbeat':"YES"
+        }
+# implementing multiple drivers
+driver_list=[]
+for i in range(6):  # 6 should be a variable
+    node_id = None # will have functions for these
+    node_IP = None
+    driver_list.append(Driver(node_id, node_IP, "DRIVER_NODE_REGISTER"))
+    # producer.send('register_topic', value=driver_list[-1].intro)
