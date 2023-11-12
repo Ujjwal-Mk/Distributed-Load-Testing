@@ -4,14 +4,16 @@ import threading
 import time
 import uuid
 import socket
+import requests
 
 class DriverNode:
-    def __init__(self, kafka_server):
+    def __init__(self, kafka_server, server_url):
         # Generate node_id and node_IP
-        self.node_id = str(uuid.uuid4())
+        self.node_id = str(uuid.uuid4())[:8]
         self.node_IP = socket.gethostbyname(socket.gethostname())
 
         self.kafka_server = kafka_server
+        self.server_url = server_url
 
         # Configure Kafka producer
         self.producer = KafkaProducer(
@@ -37,11 +39,11 @@ class DriverNode:
 
         # Metrics
         self.metrics = {
-            'mean_latency': 0,
-            'median_latency': 0,
-            'min_latency': 0,
-            'max_latency': 0
+            'latencies': [],  # Store latencies to calculate mean, median, min, max
         }
+
+        # Current load test information
+        self.current_test_id = None
 
         # Start threads for consuming messages and sending heartbeat
         threading.Thread(target=self.consume_messages, daemon=True).start()
@@ -101,19 +103,32 @@ class DriverNode:
 
     def avalanche(self, test_config):
         # Implement Avalanche load testing logic
-        pass
+        self.current_test_id = test_config['test_id']
+        while True:
+            response_time = self.send_request_to_server()
+            self.update_metrics(response_time)
 
     def tsunami(self, test_config):
         # Implement Tsunami load testing logic
-        pass
+        self.current_test_id = test_config['test_id']
+        time_delay = test_config['test_message_delay']
+        time.sleep(time_delay)
+        while True:
+            response_time = self.send_request_to_server()
+            self.update_metrics(response_time)
 
     def send_metrics(self):
         # Send metrics to Orchestrator
         metrics_message = {
             'node_id': self.node_id,
-            'test_id': 'test_id',  # Replace with actual test_id
+            'test_id': self.current_test_id,
             'report_id': str(uuid.uuid4())[:8],
-            'metrics': self.metrics
+            'metrics': {
+                'mean_latency': sum(self.metrics['latencies']) / len(self.metrics['latencies']),
+                'median_latency': self.calculate_median(self.metrics['latencies']),
+                'min_latency': min(self.metrics['latencies']),
+                'max_latency': max(self.metrics['latencies']),
+            }
         }
         self.producer.send('metrics', value=metrics_message)
 
@@ -127,9 +142,32 @@ class DriverNode:
             self.producer.send('heartbeat', value=heartbeat_message)
             time.sleep(1)
 
+    def send_request_to_server(self):
+        # Simulate sending a request to the target server
+        start_time = time.time()
+        response = requests.get(self.server_url)
+        end_time = time.time()
+        response_time = end_time - start_time
+        return response_time
+
+    def update_metrics(self, response_time):
+        # Update metrics with the received response time
+        self.metrics['latencies'].append(response_time)
+
+    def calculate_median(self, data):
+        # Calculate the median of a list of numbers
+        sorted_data = sorted(data)
+        n = len(sorted_data)
+        if n % 2 == 0:
+            median = (sorted_data[n // 2 - 1] + sorted_data[n // 2]) / 2
+        else:
+            median = sorted_data[n // 2]
+        return median
+
 if __name__ == '__main__':
     kafka_server = 'localhost:9092'
-    driver_node = DriverNode(kafka_server)
+    server_url = 'http://localhost:8080'
+    driver_node = DriverNode(kafka_server, server_url)
 
     # Keeping the script running
     while True:
