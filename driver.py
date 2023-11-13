@@ -154,6 +154,7 @@ class DriverNode:
         response = requests.get(self.server_url)
         end_time = time.time()
         response_time = end_time - start_time
+        print(response.status_code)
         return response_time
 
     def update_metrics(self, response_time):
@@ -177,7 +178,7 @@ def run_driver(kafka_server, server_url):
 
 if __name__ == '__main__':
     kafka_server = 'localhost:9092'
-    server_url = 'http://localhost:9090'
+    server_url = 'https://www.amazon.in'
 
     n = int(input("Enter the number of driver nodes you want : "))
     driverArr=[]
