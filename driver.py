@@ -27,7 +27,7 @@ class DriverNode:
         # Configure Kafka consumer
         self.consumer = KafkaConsumer(
             bootstrap_servers=self.kafka_server,
-            group_id='driver_node_group',
+            group_id=self.node_id,
             value_deserializer=lambda x: json.loads(x.decode('utf-8'))
         )
 
@@ -62,7 +62,7 @@ class DriverNode:
         for message in self.consumer:
             topic = message.topic
             value = message.value
-
+            print(f"{self.node_id} received message")
             if topic == 'test_config':
                 self.handle_test_config(value)
             elif topic == 'trigger':
@@ -170,11 +170,23 @@ class DriverNode:
             median = sorted_data[n // 2]
         return median
 
+def run_driver(kafka_server, server_url):
+    driver_node = DriverNode(kafka_server, server_url)
+    while True:
+        pass
+
 if __name__ == '__main__':
     kafka_server = 'localhost:9092'
     server_url = 'http://localhost:9090'
-    driver_node = DriverNode(kafka_server, server_url)
 
-    # Keeping the script running
-    while True:
-        pass
+    n = int(input("Enter the number of driver nodes you want : "))
+    driverArr=[]
+    for i in range(0,n):
+        thread = threading.Thread(target=run_driver, args=(kafka_server, server_url))
+        driverArr.append(thread)
+    
+    for i in range(0,n):
+        driverArr[i].start()
+    
+    for i in range(0,n):
+        driverArr[i].join()
