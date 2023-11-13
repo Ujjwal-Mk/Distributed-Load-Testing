@@ -59,12 +59,18 @@ class Orchestrator:
     def handle_registration(self, registration_message):
         # Handle registration messages from driver nodes
         node_id = registration_message['node_id']
-        self.metrics_store[node_id] = {}
+        self.metrics_store[node_id] = []
 
     def handle_metrics(self, metrics_message):
         # Handle metrics messages received from driver nodes
         node_id = metrics_message['node_id']
-        self.metrics_store[node_id].update(metrics_message['metrics'])
+        test_id = metrics_message["test_id"]
+        key=node_id
+        value=[metrics_message["test_id"],metrics_message["report_id"],metrics_message["metrics"]]
+        if key not in self.metrics_store.keys():
+            self.metrics_store[key]=[value]
+        else:
+            self.metrics_store[key].append(value)
 
     def handle_heartbeat(self, heartbeat_message):
         # Handle heartbeat message received from nodes
@@ -89,11 +95,11 @@ class Orchestrator:
         }
         self.tests[send_message["test_id"]]=[send_message['test_type'], send_message['test_message_delay']]
         self.producer.send('test_config', value=send_message)
+        print(self.tests)
         return test_id
 
     def trigger_test(self, test_id):
         # Trigger a specific test by sending a message to the 'trigger' topic
-        print(self.tests)
         if test_id in self.tests.keys():
             send_message = {
                 'test_id': test_id,
