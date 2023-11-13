@@ -9,6 +9,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
 
         # Send the response body
         response_message = "Hello World!"
+        print(response_message)
         self.wfile.write(response_message.encode('utf-8'))
 
 if __name__ == '__main__':

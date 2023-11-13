@@ -104,18 +104,24 @@ class DriverNode:
     def avalanche(self, test_config):
         # Implement Avalanche load testing logic
         self.current_test_id = test_config['test_id']
-        while True:
+        checks = 10
+        while True and checks>0:
             response_time = self.send_request_to_server()
             self.update_metrics(response_time)
+            checks-=1
+        self.send_metrics()
 
     def tsunami(self, test_config):
         # Implement Tsunami load testing logic
         self.current_test_id = test_config['test_id']
         time_delay = test_config['test_message_delay']
-        time.sleep(time_delay)
-        while True:
+        checks = 10
+        while True and checks>0:
+            time.sleep(time_delay)
             response_time = self.send_request_to_server()
             self.update_metrics(response_time)
+            checks-=1
+        self.send_metrics()
 
     def send_metrics(self):
         # Send metrics to Orchestrator
@@ -140,7 +146,7 @@ class DriverNode:
                 'heartbeat': 'YES'
             }
             self.producer.send('heartbeat', value=heartbeat_message)
-            time.sleep(1)
+            time.sleep(5)
 
     def send_request_to_server(self):
         # Simulate sending a request to the target server
@@ -166,7 +172,7 @@ class DriverNode:
 
 if __name__ == '__main__':
     kafka_server = 'localhost:9092'
-    server_url = 'http://localhost:8080'
+    server_url = 'http://localhost:9090'
     driver_node = DriverNode(kafka_server, server_url)
 
     # Keeping the script running
