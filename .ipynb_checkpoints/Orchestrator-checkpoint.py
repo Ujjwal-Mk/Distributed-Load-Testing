@@ -34,7 +34,7 @@ class Orchestrator:
 
         # Start threads for consuming messages and updating metrics
         threading.Thread(target=self.consume_messages, daemon=True).start()
-        threading.Thread(target=self.update_metrics_dashboard, daemon=True).start()
+        # threading.Thread(target=self.update_metrics_dashboard, daemon=True).start()
 
     def register(self):
         # Orchestrator registers itself with a new node_id, node_IP, and message_type
@@ -43,7 +43,7 @@ class Orchestrator:
             'node_IP': 'localhost',
             'message_type': 'ORCHESTRATOR_NODE_REGISTER'
         }
-        self.producer.send('register', value=registration_message)
+        # self.producer.send('register', value=registration_message)
 
     def consume_messages(self):
         for message in self.consumer:
@@ -59,26 +59,32 @@ class Orchestrator:
     def handle_registration(self, registration_message):
         # Handle registration messages from driver nodes
         node_id = registration_message['node_id']
-        self.metrics_store[node_id] = {'requests_sent': 0}
+        self.metrics_store[node_id] = []
 
     def handle_metrics(self, metrics_message):
         # Handle metrics messages received from driver nodes
         node_id = metrics_message['node_id']
-        self.metrics_store[node_id].update(metrics_message['metrics'])
+        test_id = metrics_message["test_id"]
+        key=node_id
+        value=[metrics_message["test_id"],metrics_message["report_id"],metrics_message["metrics"]]
+        if key not in self.metrics_store.keys():
+            self.metrics_store[key]=[value]
+        else:
+            self.metrics_store[key].append(value)
 
     def handle_heartbeat(self, heartbeat_message):
         # Handle heartbeat message received from nodes
         node_id = heartbeat_message['node_id']
-        print(f"Heartbeat received from Node {node_id}")
+        # print(f"Heartbeat received from Node {node_id}")
 
     def update_metrics_dashboard(self):
-        while True:
+        # while True:
             # Print or display the metrics dashboard
-            print("Metrics Dashboard:")
-            for node_id, metrics in self.metrics_store.items():
-                print(f"Node {node_id}: {metrics}")
-            print("-" * 20)
-            time.sleep(1)
+        print("Metrics Dashboard:")
+        for node_id, metrics in self.metrics_store.items():
+            print(f"Node {node_id}: {metrics}")
+        print("-" * 20)
+        # time.sleep(1)
 
     def create_test(self, test_type, test_delay):
         test_id = str(uuid.uuid4())
@@ -87,12 +93,14 @@ class Orchestrator:
             'test_type': test_type,
             'test_message_delay': test_delay
         }
+        self.tests[send_message["test_id"]]=[send_message['test_type'], send_message['test_message_delay']]
         self.producer.send('test_config', value=send_message)
+        print(self.tests)
         return test_id
 
     def trigger_test(self, test_id):
         # Trigger a specific test by sending a message to the 'trigger' topic
-        if test_id in self.tests:
+        if test_id in self.tests.keys():
             send_message = {
                 'test_id': test_id,
                 'trigger': 'YES'
@@ -109,17 +117,20 @@ if __name__ == '__main__':
     while True:
         print("1. Create Test")
         print("2. Trigger a Load Test")
-        print("3. Exit")
+        print("3. Display Metrics")
+        print("4. Exit")
         choice = input("Enter your choice: ")
         if choice == '1':
             test_type = input("Enter test type (avalanche/tsunami): ")
-            test_delay = int(input("Enter test delay (in seconds for tsunami, 0 for avalanche): "))
+            test_delay = float(input("Enter test delay (in seconds for tsunami, 0 for avalanche): "))
             test_id = orchestrator.create_test(test_type, test_delay)
             print(f"Test created with ID: {test_id}")
         elif choice == '2':
-            test_id = input("Enter the test id you want to trigger")
+            test_id = input("Enter the test id you want to trigger: ")
             orchestrator.trigger_test(test_id)
         elif choice == '3':
+            orchestrator.update_metrics_dashboard()
+        elif choice == '4':
             break
         else:
             print("Invalid choice. Please try again.")

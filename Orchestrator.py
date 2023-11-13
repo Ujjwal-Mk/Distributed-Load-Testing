@@ -122,7 +122,7 @@ if __name__ == '__main__':
         choice = input("Enter your choice: ")
         if choice == '1':
             test_type = input("Enter test type (avalanche/tsunami): ")
-            test_delay = int(input("Enter test delay (in seconds for tsunami, 0 for avalanche): "))
+            test_delay = float(input("Enter test delay (in seconds for tsunami, 0 for avalanche): "))
             test_id = orchestrator.create_test(test_type, test_delay)
             print(f"Test created with ID: {test_id}")
         elif choice == '2':

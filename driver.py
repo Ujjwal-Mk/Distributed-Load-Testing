@@ -182,12 +182,15 @@ if __name__ == '__main__':
 
     n = int(input("Enter the number of driver nodes you want : "))
     driverArr=[]
-    for i in range(0,n):
-        thread = threading.Thread(target=run_driver, args=(kafka_server, server_url))
-        driverArr.append(thread)
-    
-    for i in range(0,n):
-        driverArr[i].start()
-    
-    for i in range(0,n):
-        driverArr[i].join()
+    try:
+        for i in range(0,n):
+            thread = threading.Thread(target=run_driver, args=(kafka_server, server_url))
+            driverArr.append(thread)
+        
+        for i in range(0,n):
+            driverArr[i].start()
+        
+        for i in range(0,n):
+            driverArr[i].join()
+    except KeyboardInterrupt:
+        print('Perform KeyboardInterrupt one more time..')

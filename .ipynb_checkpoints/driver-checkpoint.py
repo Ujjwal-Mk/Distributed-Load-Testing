@@ -27,7 +27,7 @@ class DriverNode:
         # Configure Kafka consumer
         self.consumer = KafkaConsumer(
             bootstrap_servers=self.kafka_server,
-            group_id='driver_node_group',
+            group_id=self.node_id,
             value_deserializer=lambda x: json.loads(x.decode('utf-8'))
         )
 
@@ -62,7 +62,7 @@ class DriverNode:
         for message in self.consumer:
             topic = message.topic
             value = message.value
-
+            print(f"{self.node_id} received message")
             if topic == 'test_config':
                 self.handle_test_config(value)
             elif topic == 'trigger':
@@ -104,18 +104,24 @@ class DriverNode:
     def avalanche(self, test_config):
         # Implement Avalanche load testing logic
         self.current_test_id = test_config['test_id']
-        while True:
+        checks = 10
+        while True and checks>0:
             response_time = self.send_request_to_server()
             self.update_metrics(response_time)
+            checks-=1
+        self.send_metrics()
 
     def tsunami(self, test_config):
         # Implement Tsunami load testing logic
         self.current_test_id = test_config['test_id']
         time_delay = test_config['test_message_delay']
-        time.sleep(time_delay)
-        while True:
+        checks = 10
+        while True and checks>0:
+            time.sleep(time_delay)
             response_time = self.send_request_to_server()
             self.update_metrics(response_time)
+            checks-=1
+        self.send_metrics()
 
     def send_metrics(self):
         # Send metrics to Orchestrator
@@ -140,7 +146,7 @@ class DriverNode:
                 'heartbeat': 'YES'
             }
             self.producer.send('heartbeat', value=heartbeat_message)
-            time.sleep(1)
+            time.sleep(5)
 
     def send_request_to_server(self):
         # Simulate sending a request to the target server
@@ -148,6 +154,7 @@ class DriverNode:
         response = requests.get(self.server_url)
         end_time = time.time()
         response_time = end_time - start_time
+        print(response.status_code)
         return response_time
 
     def update_metrics(self, response_time):
@@ -164,11 +171,26 @@ class DriverNode:
             median = sorted_data[n // 2]
         return median
 
-if __name__ == '__main__':
-    kafka_server = 'localhost:9092'
-    server_url = 'http://localhost:8080'
+def run_driver(kafka_server, server_url):
     driver_node = DriverNode(kafka_server, server_url)
-
-    # Keeping the script running
     while True:
         pass
+
+if __name__ == '__main__':
+    kafka_server = 'localhost:9092'
+    server_url = 'https://www.amazon.in'
+
+    n = int(input("Enter the number of driver nodes you want : "))
+    driverArr=[]
+    try:
+        for i in range(0,n):
+            thread = threading.Thread(target=run_driver, args=(kafka_server, server_url))
+            driverArr.append(thread)
+        
+        for i in range(0,n):
+            driverArr[i].start()
+        
+        for i in range(0,n):
+            driverArr[i].join()
+    except KeyboardInterrupt:
+        print('Perform KeyboardInterrupt one more time..')
