@@ -3,10 +3,15 @@ import json
 import threading
 import time
 import uuid
+import argparse
 
 class Orchestrator:
-    def __init__(self, kafka_server):
+    def __init__(self, kafka_server, orchestrator_ip):
         self.kafka_server = kafka_server
+        self.orchestrator_ip=orchestrator_ip
+        self.heartbeat_timeout=5
+
+        self.last_heartbeat_timestamps={}
 
         # Configure Kafka producer
         self.producer = KafkaProducer(
@@ -30,17 +35,18 @@ class Orchestrator:
         self.tests = {}
 
         # Register Orchestrator
-        self.register()
+        self.register(self.orchestrator_ip)
 
         # Start threads for consuming messages and updating metrics
         threading.Thread(target=self.consume_messages, daemon=True).start()
+        threading.Thread(target=self.check_inactive_nodes, daemon=True).start()
         # threading.Thread(target=self.update_metrics_dashboard, daemon=True).start()
 
-    def register(self):
+    def register(self, orchestrator_ip):
         # Orchestrator registers itself with a new node_id, node_IP, and message_type
         registration_message = {
             'node_id': str(uuid.uuid4())[:8],
-            'node_IP': 'localhost',
+            'node_IP': orchestrator_ip,
             'message_type': 'ORCHESTRATOR_NODE_REGISTER'
         }
         # self.producer.send('register', value=registration_message)
@@ -75,15 +81,28 @@ class Orchestrator:
     def handle_heartbeat(self, heartbeat_message):
         # Handle heartbeat message received from nodes
         node_id = heartbeat_message['node_id']
-        # print(f"Heartbeat received from Node {node_id}")
+        self.last_heartbeat_timestamps[node_id] = time.time()
+        # print(heartbeat_message)
+    
+    def check_inactive_nodes(self):
+        while True:
+            current_time = time.time()
+            inactive_nodes = [node for node, last_heartbeat_time in self.last_heartbeat_timestamps.items() if current_time - last_heartbeat_time >= self.heartbeat_timeout]
+
+            for node_id in inactive_nodes:
+                self.metrics_store.pop(node_id, None)  # Use dict.pop(key, None) to avoid KeyError
+                self.last_heartbeat_timestamps.pop(node_id, None)
+                print(f"\nDriver Node {node_id} removed due to inactivity.")
+
+            time.sleep(0.1)  # Adjust the sleep interval as needed
 
     def update_metrics_dashboard(self):
         # while True:
             # Print or display the metrics dashboard
         print("Metrics Dashboard:")
         for node_id, metrics in self.metrics_store.items():
-            print(f"Node {node_id}: {metrics}")
-        print("-" * 20)
+            print(f"Driver Node {node_id}: {metrics}")
+        print("-" * 50)
         # time.sleep(1)
 
     def create_test(self, test_type, test_delay):
@@ -112,8 +131,13 @@ class Orchestrator:
             return False
 
 if __name__ == '__main__':
-    kafka_server = 'localhost:9092'
-    orchestrator = Orchestrator(kafka_server)
+
+    parser = argparse.ArgumentParser(description='Orchestrator Node')
+    parser.add_argument('--kafka-server', default='localhost:9092', help='Kafka server address')
+    parser.add_argument('--orchestrator-ip', default=192168, help='Orchestrator IP')
+    args = parser.parse_args()
+
+    orchestrator = Orchestrator(args.kafka_server, args.orchestrator_ip)
     while True:
         print("1. Create Test")
         print("2. Trigger a Load Test")
