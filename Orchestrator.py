@@ -26,7 +26,7 @@ class Orchestrator:
             value_deserializer=lambda x: json.loads(x.decode('utf-8'))
         )
 
-        self.consumer.subscribe(['register', 'trigger', 'metrics', 'test_config', 'heartbeat'])
+        self.consumer.subscribe(['register', 'trigger', 'metrics', 'test_config', 'heartbeat', 'end_test'])
         
         # Metrics store
         self.metrics_store = {}
@@ -61,6 +61,8 @@ class Orchestrator:
                 self.handle_metrics(value)
             elif topic == 'heartbeat':
                 self.handle_heartbeat(value)
+            elif topic=='end_test':
+                print(f"{value}")
 
     def handle_registration(self, registration_message):
         # Handle registration messages from driver nodes
@@ -130,6 +132,9 @@ class Orchestrator:
             print(f"Test with ID {test_id} not found.")
             return False
 
+    def death(self):
+        self.producer.send('end',value="KILL DRIVERS")
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Orchestrator Node')
@@ -155,6 +160,8 @@ if __name__ == '__main__':
         elif choice == '3':
             orchestrator.update_metrics_dashboard()
         elif choice == '4':
+            orchestrator.death()
+            time.sleep(1)
             break
         else:
             print("Invalid choice. Please try again.")
