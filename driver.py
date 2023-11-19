@@ -1,9 +1,12 @@
 from kafka import KafkaProducer, KafkaConsumer
 import json, threading, time, uuid, socket, requests, argparse, signal, sys
 
+TOTALREQUESTS=1000
+
 class DriverNode:
-    def __init__(self, kafka_server, server_url, throughput, exit_event):
+    def __init__(self, kafka_server, server_url, throughput, exit_event, requests):
         # Generate node_id and node_IP
+        self.TOTALREQUESTS = requests
         self.node_id = str(uuid.uuid4())[:8]
         self.node_IP = socket.gethostbyname(socket.gethostname())
 
@@ -118,13 +121,14 @@ class DriverNode:
         self.current_test_id = test_config['test_id']
         checks = 10
         delay = 1 / self.throughput
-        while True and checks > 0:
+        while True and self.TOTALREQUESTS > 0:
             if self.exit_event.is_set():
                 break  # Exit the thread if the exit event is set
             time.sleep(delay)
             response_time = self.send_request_to_server()
             self.update_metrics(response_time)
-            checks -= 1
+            # checks -= 1
+            self.TOTALREQUESTS-=1
         self.producer.send("end_test", value=f"{self.node_id} finished testing")
         self.send_metrics()
 
@@ -133,13 +137,14 @@ class DriverNode:
         self.current_test_id = test_config['test_id']
         time_delay = test_config['test_message_delay']
         checks = 10
-        while True and checks > 0:
+        while True and self.TOTALREQUESTS > 0:
             if self.exit_event.is_set():
                 break  # Exit the thread if the exit event is set
             time.sleep(time_delay / self.throughput)
             response_time = self.send_request_to_server()
             self.update_metrics(response_time)
-            checks -= 1
+            # checks -= 1
+            self.TOTALREQUESTS-=1
         self.producer.send("end_test", value=f"{self.node_id} finished testing")
         self.send_metrics()
 
@@ -178,7 +183,7 @@ class DriverNode:
         end_time = time.time()
         response_time = end_time - start_time
         self.requests_sent += 1
-        print(response.status_code, self.node_id)
+        print(response.status_code, self.node_id, self.TOTALREQUESTS)
         return response_time
 
     def update_metrics(self, response_time):
@@ -195,8 +200,8 @@ class DriverNode:
             median = sorted_data[n // 2]
         return median
 
-def run_driver(kafka_server, server_url, throughput, exit_event):
-    driver_node = DriverNode(kafka_server, server_url, throughput, exit_event)
+def run_driver(kafka_server, server_url, throughput, exit_event, requests):
+    driver_node = DriverNode(kafka_server, server_url, throughput, exit_event, requests)
     try:
         while not exit_event.is_set():
             pass
@@ -217,7 +222,9 @@ if __name__ == '__main__':
     exit_event = threading.Event()
 
     def signal_handler(sign, frame):
+        # When keyboard interrupt is signalled.
         print("\nStopping threads...")
+        print("Requests left:", TOTALREQUESTS)
         exit_event.set()
         sys.exit(0)
 
@@ -225,7 +232,7 @@ if __name__ == '__main__':
 
     try:
         for i in range(0, n):
-            thread = threading.Thread(target=run_driver, args=(args.kafka_server, args.server_url, args.throughput[i], exit_event))
+            thread = threading.Thread(target=run_driver, args=(args.kafka_server, args.server_url, args.throughput[i], exit_event, TOTALREQUESTS//n))
             driverArr.append(thread)
 
         for i in range(0, n):
