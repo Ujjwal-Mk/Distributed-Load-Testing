@@ -7,6 +7,7 @@ class DriverNode:
     def __init__(self, kafka_server, server_url, throughput, exit_event, requests):
         # Generate node_id and node_IP
         self.TOTALREQUESTS = requests
+        self.reserve = requests
         self.node_id = str(uuid.uuid4())[:8]
         self.node_IP = socket.gethostbyname(socket.gethostname())
 
@@ -132,6 +133,7 @@ class DriverNode:
             self.TOTALREQUESTS-=1
         self.producer.send("end_test", value=f"{self.node_id} finished testing")
         self.send_metrics()
+        self.TOTALREQUESTS=self.reserve
 
     def tsunami(self, test_config):
         # Implement Tsunami load testing logic
@@ -148,6 +150,7 @@ class DriverNode:
             self.TOTALREQUESTS-=1
         self.producer.send("end_test", value=f"{self.node_id} finished testing")
         self.send_metrics()
+        self.TOTALREQUESTS=self.reserve
 
     def send_metrics(self):
         # Send metrics to Orchestrator, including the requests_sent count
@@ -216,8 +219,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Driver Node')
     parser.add_argument('--kafka-server', default='localhost:9092', help='Kafka server address')
     parser.add_argument('--server-url', default='http://localhost:9090/ping', help='Target server URL')
-    parser.add_argument('--throughput', nargs='+', default=[1], type=int, help='Per Node Throughput')
-    parser.add_argument('--no-of-drivers', default=1, type=int, help="Number of driver nodes")
+    parser.add_argument('--throughput', nargs='+', default=[1,1], type=int, help='Per Node Throughput')
+    parser.add_argument('--no-of-drivers', default=2, type=int, help="Number of driver nodes")
 
     args = parser.parse_args()
     n = args.no_of_drivers
