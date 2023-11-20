@@ -258,20 +258,12 @@ if __name__ == '__main__':
     orchestrator_online = False
     for _ in range(2):  # Try checking for orchestrator for a limited number of attempts
         orchestrator_check_messages = orchestrator_check_consumer.poll(100)
-        print(orchestrator_check_messages.messages)
-        
-        # Check if there are messages in the 'master-check' topic
-        if 'master-check' in orchestrator_check_messages:
-            orchestrator_status = orchestrator_check_messages['master-check'][0].value.get('status')
-            if orchestrator_status == 'online':
-                print("Orchestrator is online. Continuing...")
-                orchestrator_online = True
-                break
-            elif orchestrator_status == 'offline':
-                print("Orchestrator is offline. Looking for orchestrator...")
-                time.sleep(5)
+        if orchestrator_check_messages:
+            print("Orchestrator is online. Continuing...")
+            orchestrator_online = True
+            break
         else:
-            print("No message received. Looking for orchestrator...")
+            print("Looking For Orchestrator...")
             time.sleep(5)
 
     if not orchestrator_online:

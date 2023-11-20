@@ -53,7 +53,7 @@ class Orchestrator:
         # self.producer.send('register', value=registration_message)
     
     def send_beat(self):
-        self.producer.send("master-check", value={'status': 'online'})
+        self.producer.send("master-check",value="orchestrator available")
 
     def consume_messages(self):
         for message in self.consumer:
@@ -138,8 +138,6 @@ class Orchestrator:
 
     def death(self):
         self.producer.send('end',value="KILL DRIVERS")
-        self.producer.send('master-check', value={'status': 'offline'})
-
 
 if __name__ == '__main__':
 
@@ -158,12 +156,9 @@ if __name__ == '__main__':
         choice = input("Enter your choice: ")
         if choice == '1':
             test_type = input("Enter test type (avalanche/tsunami): ")
-            try:
-                test_delay = float(input("Enter test delay (in seconds for tsunami, 0 for avalanche): "))
-                test_id = orchestrator.create_test(test_type, test_delay)
-                print(f"Test created with ID: {test_id}")
-            except ValueError:
-                print("Enter valid number")
+            test_delay = float(input("Enter test delay (in seconds for tsunami, 0 for avalanche): "))
+            test_id = orchestrator.create_test(test_type, test_delay)
+            print(f"Test created with ID: {test_id}")
         elif choice == '2':
             test_id = input("Enter the test id you want to trigger: ")
             orchestrator.trigger_test(test_id)
