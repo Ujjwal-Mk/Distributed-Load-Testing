@@ -40,6 +40,7 @@ class Orchestrator:
         # Start threads for consuming messages and updating metrics
         threading.Thread(target=self.consume_messages, daemon=True).start()
         threading.Thread(target=self.check_inactive_nodes, daemon=True).start()
+        threading.Thread(target=self.send_beat, daemon=True).start()
         # threading.Thread(target=self.update_metrics_dashboard, daemon=True).start()
 
     def register(self, orchestrator_ip):
@@ -50,6 +51,9 @@ class Orchestrator:
             'message_type': 'ORCHESTRATOR_NODE_REGISTER'
         }
         # self.producer.send('register', value=registration_message)
+    
+    def send_beat(self):
+        self.producer.send("master-check",value="orchestrator available")
 
     def consume_messages(self):
         for message in self.consumer:
