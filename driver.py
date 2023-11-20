@@ -14,6 +14,7 @@ class DriverNode:
         self.kafka_server = kafka_server
         self.server_url = server_url
         self.requests_sent = 0
+        self.responses_received=0
         self.exit_event = exit_event  # Event for signaling threads to exit
 
         # Configure Kafka producer
@@ -159,7 +160,8 @@ class DriverNode:
                 'median_latency': self.calculate_median(self.metrics['latencies']),
                 'min_latency': min(self.metrics['latencies']),
                 'max_latency': max(self.metrics['latencies']),
-                'requests_sent': self.requests_sent
+                'requests_sent': self.requests_sent,
+                'responses_received': self.responses_received
             }
         }
         self.producer.send('metrics', value=metrics_message)
@@ -178,11 +180,13 @@ class DriverNode:
 
     def send_request_to_server(self):
         # Simulate sending a request to the target server
+        self.requests_sent += 1
+        self.producer.send("ping",value=self.node_id)
         start_time = time.time()
         response = requests.get(self.server_url)
         end_time = time.time()
         response_time = end_time - start_time
-        self.requests_sent += 1
+        self.responses_received+=1
         print(response.status_code, self.node_id, self.TOTALREQUESTS)
         return response_time
 
@@ -211,7 +215,7 @@ def run_driver(kafka_server, server_url, throughput, exit_event, requests):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Driver Node')
     parser.add_argument('--kafka-server', default='localhost:9092', help='Kafka server address')
-    parser.add_argument('--server-url', default='http://localhost:9090', help='Target server URL')
+    parser.add_argument('--server-url', default='http://localhost:9090/ping', help='Target server URL')
     parser.add_argument('--throughput', nargs='+', default=[1], type=int, help='Per Node Throughput')
     parser.add_argument('--no-of-drivers', default=1, type=int, help="Number of driver nodes")
 
