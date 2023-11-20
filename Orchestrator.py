@@ -147,7 +147,8 @@ if __name__ == '__main__':
         print("1. Create Test")
         print("2. Trigger a Load Test")
         print("3. Display Metrics")
-        print("4. Exit")
+        print("4. Display Test Configuration(s)")
+        print("5. Exit")
         choice = input("Enter your choice: ")
         if choice == '1':
             test_type = input("Enter test type (avalanche/tsunami): ")
@@ -160,6 +161,8 @@ if __name__ == '__main__':
         elif choice == '3':
             orchestrator.update_metrics_dashboard()
         elif choice == '4':
+            print('\n',orchestrator.tests,'\n')
+        elif choice == '5':
             orchestrator.death()
             time.sleep(1)
             break
